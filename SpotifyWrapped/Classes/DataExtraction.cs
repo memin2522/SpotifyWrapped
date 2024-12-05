@@ -11,7 +11,7 @@ namespace SpotifyWrapped.Classes
     public class DataExtraction
     {
 
-        private readonly string credentialsPath = @"Credentials\meminvarios-4dcc1a5a93d1.json";
+        private readonly string credentialsPath = @"Credentials\meminvarios-139a8079c3fc.json";
         private readonly string spreadsheetId = "1bAkP1PsTfn3PPYAsdsjowV_3lBsdfSD4lFIwY_ri1EA";
         private readonly string range = "register!A1:I500";
 

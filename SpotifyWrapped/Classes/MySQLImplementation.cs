@@ -25,13 +25,13 @@ namespace SpotifyWrapped.Classes
             if (string.IsNullOrWhiteSpace(table) || string.IsNullOrWhiteSpace(condition))
                 throw new ArgumentException("Table name and condition cannot be null or empty.");
 
-            using (_db)
+            using (var db = _mySQLConnection.GetConection())
             {
                 try
                 {
-                    await _db.OpenAsync();
+                    await db.OpenAsync();
                     var query = $"SELECT * FROM {table} WHERE {condition} = @Parameter;";
-                    var result = await _db.QueryAsync<T>(query, new { Parameter = parameter });
+                    var result = await db.QueryAsync<T>(query, new { Parameter = parameter });
 
                     return result;
                 }
@@ -41,30 +41,33 @@ namespace SpotifyWrapped.Classes
                 }
                 finally
                 {
-                    await _db.CloseAsync();
+                    await db.CloseAsync();
                 }
             }
         }
 
         public async Task<IEnumerable<T>> GetData<T>(string table)
         {
-            try
+            using (var db = _mySQLConnection.GetConection())
             {
-                await _db.OpenAsync();
-                var query = $"SELECT * FROM {table}";
-                var result = await _db.QueryAsync<T>(query);
-                return result;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error al obtener datos de la tabla {table}: {ex.Message}");
-                return null;
-            }
-            finally
-            {
-                if (_db.State == ConnectionState.Open)
+                try
                 {
-                    await _db.CloseAsync();
+                    await db.OpenAsync();
+                    var query = $"SELECT * FROM {table}";
+                    var result = await db.QueryAsync<T>(query);
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error al obtener datos de la tabla {table}: {ex.Message}");
+                    return null;
+                }
+                finally
+                {
+                    if (db.State == ConnectionState.Open)
+                    {
+                        await db.CloseAsync();
+                    }
                 }
             }
         }
@@ -72,11 +75,11 @@ namespace SpotifyWrapped.Classes
 
         public async Task<bool> InsertData<T>(string table, List<T> objects)
         {
-            using (_db) 
+            using (var db = _mySQLConnection.GetConection()) 
             {
                 try
                 {
-                    await _db.OpenAsync();
+                    await db.OpenAsync();
 
                     var objType = typeof(T);
                     var properties = objType.GetProperties();
@@ -105,7 +108,7 @@ namespace SpotifyWrapped.Classes
                     var valuesQuery = string.Join(", ", valueRows);
                     var query = $"INSERT INTO {table} ({columnNames}) VALUES {valuesQuery};";
 
-                    using (var command = new MySqlCommand(query, _db))
+                    using (var command = new MySqlCommand(query, db))
                     {
                         command.Parameters.AddRange(parameters.ToArray());
                         await command.ExecuteNonQueryAsync();
@@ -119,9 +122,9 @@ namespace SpotifyWrapped.Classes
                 }
                 finally
                 {
-                    if (_db.State == System.Data.ConnectionState.Open)
+                    if (db.State == System.Data.ConnectionState.Open)
                     {
-                        await _db.CloseAsync();
+                        await db.CloseAsync();
                     }
                 }
             }
