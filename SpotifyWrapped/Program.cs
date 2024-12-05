@@ -1,7 +1,15 @@
+using ETLYelticDashboard.Classes.Database.Generic;
+using ETLYelticDashboard.Interfaces;
+using SpotifyWrapped.Classes;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddSingleton<MySQLConnection>();
+builder.Services.AddScoped<IDatabase, MySQLImplementation>();
+builder.Services.AddScoped<DatabaseIntermediary>();
+
 
 var app = builder.Build();
 
