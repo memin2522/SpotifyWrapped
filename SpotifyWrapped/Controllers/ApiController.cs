@@ -24,9 +24,19 @@ namespace SpotifyWrapped.Controllers
         public async Task<IActionResult> Index()
         {
             var extractedData = await _extractInfo.ExtractionCicle();
-            await _loadInfo.ProcessRawData(extractedData);
+            var result = await _loadInfo.ProcessRawData(extractedData);
 
-            return Ok("Procesado mi perro");
+            if (result)
+            {
+                await _extractInfo.CleanSpreadsheet();
+                return Ok("The listened songs has been loaded to the database and the spreadsheet is clean");
+            }
+            else
+            {
+                return BadRequest("An error had happened");
+            }
+
+            
         }
     }
 }

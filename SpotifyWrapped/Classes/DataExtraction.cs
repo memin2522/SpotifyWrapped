@@ -15,6 +15,27 @@ namespace SpotifyWrapped.Classes
         private readonly string spreadsheetId = "1bAkP1PsTfn3PPYAsdsjowV_3lBsdfSD4lFIwY_ri1EA";
         private readonly string range = "register!A1:I500";
 
+        private SheetsService _sheetsService;
+
+        private SheetsService GetGoogleSheetService()
+        {
+            if (_sheetsService == null)
+            {
+                var credential = GoogleCredential.FromFile(credentialsPath)
+                                                 .CreateScoped(SheetsService.Scope.Spreadsheets);
+
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = "Google Sheets API Example"
+                });
+
+                _sheetsService = service;
+                
+            }
+            return _sheetsService;
+        }
+
         public async Task<List<SpotifySong>> ExtractionCicle()
         {
             var extractedContent = await ExtractSpotifySongFromSpreadsheet();
@@ -29,14 +50,7 @@ namespace SpotifyWrapped.Classes
         {
             try
             {
-                var credential = GoogleCredential.FromFile(credentialsPath)
-                                                 .CreateScoped(SheetsService.Scope.Spreadsheets);
-
-                var service = new SheetsService(new BaseClientService.Initializer()
-                {
-                    HttpClientInitializer = credential,
-                    ApplicationName = "Google Sheets API Example"
-                });
+                var service = GetGoogleSheetService();
 
                 SpreadsheetsResource.ValuesResource.GetRequest request = service.Spreadsheets.Values.Get(spreadsheetId, range);
                 ValueRange response = request.Execute();
@@ -44,11 +58,6 @@ namespace SpotifyWrapped.Classes
 
                 if (values != null && values.Count > 0)
                 {
-                    // Intentar borrar los datos
-                    var clearRequest = new ClearValuesRequest();
-                    var clearResponse = await service.Spreadsheets.Values.Clear(clearRequest, spreadsheetId, range).ExecuteAsync();
-
-
                     Console.WriteLine("Data found, returning info");
                     return values;
                 }
@@ -92,6 +101,12 @@ namespace SpotifyWrapped.Classes
                 .ToList();
 
             return spotifySongs;
+        }
+        public async Task CleanSpreadsheet()
+        {
+            var service = GetGoogleSheetService();
+            var clearRequest = new ClearValuesRequest();
+            var clearResponse = await service.Spreadsheets.Values.Clear(clearRequest, spreadsheetId, range).ExecuteAsync();
         }
     }
 }

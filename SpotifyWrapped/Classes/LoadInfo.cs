@@ -12,10 +12,19 @@ namespace SpotifyWrapped.Classes
         {
             _dbSQL = databaseIntermediary;
         }
-        public async Task ProcessRawData(List<SpotifySong> extractedSongs)
+        public async Task<bool> ProcessRawData(List<SpotifySong> extractedSongs)
         {
-            await ProcessSongs(extractedSongs);
-            await ProcessEvents(extractedSongs);
+            try
+            {
+                await ProcessSongs(extractedSongs);
+                await ProcessEvents(extractedSongs);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            
         }
 
         public async Task ProcessSongs(List<SpotifySong> extractedSongs)
