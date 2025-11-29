@@ -1,0 +1,28 @@
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql_api
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: Memin_2522
+      MYSQL_DATABASE: spotify_wrapped
+      MYSQL_USER: spotifyAPI
+      MYSQL_PASSWORD: Memin_2522
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/init:/docker-entrypoint-initdb.d
+
+  api:
+    build:
+      context: ./SpotifyWrapped  # Carpeta donde está tu Dockerfile
+    container_name: spotify_api
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+
+volumes:
+  mysql_data:

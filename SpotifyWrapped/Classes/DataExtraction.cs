@@ -11,16 +11,11 @@ namespace SpotifyWrapped.Classes
     public class DataExtraction
     {
 
-        private readonly string credentialsPath = @"Credentials\SheetsServiceAccount.json";
+        private readonly string credentialsPath = @"Credentials/SheetsServiceAccount.json";
         private readonly string spreadsheetId = "1Rkvlr6JMwN41WfsTKMQj70TcrwSn5QZuUVcOtB6oOQY";
         private readonly string range = "Hoja 1!A1:I2000";
 
         private SheetsService _sheetsService;
-
-        private string[] spreadsheetIds = new string[]
-        {
-            "1Rkvlr6JMwN41WfsTKMQj70TcrwSn5QZuUVcOtB6oOQY",
-        };
 
         private SheetsService GetGoogleSheetService()
         {
@@ -53,45 +48,34 @@ namespace SpotifyWrapped.Classes
 
         public async Task<List<IList<object>>> ExtractSpotifySongFromSpreadsheet()
         {
-            var combinedValues = new List<IList<object>>();
+            var extractedList = new List<IList<object>>();
 
             try
             {
                 var service = GetGoogleSheetService();
-
-                foreach (string id in spreadsheetIds)
+                
+                var request = service.Spreadsheets.Values.Get(spreadsheetId, range);
+                var response = request.Execute();
+                var values = response.Values ?? new List<IList<object>>();
+                
+                if (values.Count > 0)
                 {
-                    try
-                    {
-                        Console.WriteLine($"Processing Spreadsheet ID: {id}");
-
-                        var request = service.Spreadsheets.Values.Get(id, range);
-                        var response = request.Execute();
-                        var values = response.Values ?? new List<IList<object>>();
-
-                        if (values.Count > 0)
-                        {
-                            Console.WriteLine($"Data found in spreadsheet {id}: {values.Count} rows");
-                            combinedValues.AddRange(values);
-                        }
-                        else
-                        {
-                            Console.WriteLine($"No data found in spreadsheet {id}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error processing spreadsheet {id}: {ex.Message}");
-                    }
+                    Console.WriteLine($"Data found in spreadsheet: {values.Count} rows");
+                    extractedList.AddRange(values);
                 }
+                else
+                {
+                    Console.WriteLine($"No data found in spreadsheet");
+                }
+                
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Fatal error: {ex.Message}");
             }
 
-            Console.WriteLine($"Total rows combined: {combinedValues.Count}");
-            return combinedValues;
+            Console.WriteLine($"Total rows combined: {extractedList.Count}");
+            return extractedList;
         }
 
         public List<SpotifySong> ProcessSpotifySongs(IList<IList<object>> values)
@@ -113,19 +97,16 @@ namespace SpotifyWrapped.Classes
         public async Task CleanSpreadsheet()
         {
             var service = GetGoogleSheetService();
-
-            // 1. Eliminar valores
             var clearRequest = new ClearValuesRequest();
             await service.Spreadsheets.Values.Clear(clearRequest, spreadsheetId, "Hoja 1").ExecuteAsync();
 
-            // 2. Reducir la hoja a 1 fila y 1 columna (resetea el contador real)
             var request = new Request
             {
                 UpdateSheetProperties = new UpdateSheetPropertiesRequest
                 {
                     Properties = new SheetProperties
                     {
-                        SheetId = 0,  // si la hoja es la primera
+                        SheetId = 0,
                         GridProperties = new GridProperties
                         {
                             RowCount = 1,
