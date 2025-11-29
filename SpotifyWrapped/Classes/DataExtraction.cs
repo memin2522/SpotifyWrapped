@@ -11,11 +11,16 @@ namespace SpotifyWrapped.Classes
     public class DataExtraction
     {
 
-        private readonly string credentialsPath = @"Credentials\meminvarios-139a8079c3fc.json";
-        private readonly string spreadsheetId = "1bAkP1PsTfn3PPYAsdsjowV_3lBsdfSD4lFIwY_ri1EA";
-        private readonly string range = "register!A1:I500";
+        private readonly string credentialsPath = @"Credentials\SheetsServiceAccount.json";
+        private readonly string spreadsheetId = "1Rkvlr6JMwN41WfsTKMQj70TcrwSn5QZuUVcOtB6oOQY";
+        private readonly string range = "Hoja 1!A1:I2000";
 
         private SheetsService _sheetsService;
+
+        private string[] spreadsheetIds = new string[]
+        {
+            "1Rkvlr6JMwN41WfsTKMQj70TcrwSn5QZuUVcOtB6oOQY",
+        };
 
         private SheetsService GetGoogleSheetService()
         {
@@ -46,44 +51,47 @@ namespace SpotifyWrapped.Classes
         }
 
 
-        public async Task<IList<IList<object>>> ExtractSpotifySongFromSpreadsheet()
+        public async Task<List<IList<object>>> ExtractSpotifySongFromSpreadsheet()
         {
+            var combinedValues = new List<IList<object>>();
+
             try
             {
                 var service = GetGoogleSheetService();
 
-                SpreadsheetsResource.ValuesResource.GetRequest request = service.Spreadsheets.Values.Get(spreadsheetId, range);
-                ValueRange response = request.Execute();
-                var values = response.Values;
+                foreach (string id in spreadsheetIds)
+                {
+                    try
+                    {
+                        Console.WriteLine($"Processing Spreadsheet ID: {id}");
 
-                if (values != null && values.Count > 0)
-                {
-                    Console.WriteLine("Data found, returning info");
-                    return values;
+                        var request = service.Spreadsheets.Values.Get(id, range);
+                        var response = request.Execute();
+                        var values = response.Values ?? new List<IList<object>>();
+
+                        if (values.Count > 0)
+                        {
+                            Console.WriteLine($"Data found in spreadsheet {id}: {values.Count} rows");
+                            combinedValues.AddRange(values);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"No data found in spreadsheet {id}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error processing spreadsheet {id}: {ex.Message}");
+                    }
                 }
-                else
-                {
-                    Console.WriteLine("No data found, returning empty list.");
-                    return new List<IList<object>>();
-                }
-            }
-            catch (Google.GoogleApiException ex)
-            {
-                Console.WriteLine($"Error in the Google API: {ex.Message}");
-                if (ex.Error != null)
-                {
-                    Console.WriteLine($"Error Code: {ex.Error.Code}");
-                    Console.WriteLine($"Error Message: {ex.Error.Message}");
-                    Console.WriteLine($"Details: {string.Join("; ", ex.Error.Errors.Select(e => e.Message))}");
-                }
-                return new List<IList<object>>();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"General error: {ex.Message}");
-                return new List<IList<object>>();
+                Console.WriteLine($"Fatal error: {ex.Message}");
             }
 
+            Console.WriteLine($"Total rows combined: {combinedValues.Count}");
+            return combinedValues;
         }
 
         public List<SpotifySong> ProcessSpotifySongs(IList<IList<object>> values)
@@ -105,8 +113,35 @@ namespace SpotifyWrapped.Classes
         public async Task CleanSpreadsheet()
         {
             var service = GetGoogleSheetService();
+
+            // 1. Eliminar valores
             var clearRequest = new ClearValuesRequest();
-            var clearResponse = await service.Spreadsheets.Values.Clear(clearRequest, spreadsheetId, range).ExecuteAsync();
+            await service.Spreadsheets.Values.Clear(clearRequest, spreadsheetId, "Hoja 1").ExecuteAsync();
+
+            // 2. Reducir la hoja a 1 fila y 1 columna (resetea el contador real)
+            var request = new Request
+            {
+                UpdateSheetProperties = new UpdateSheetPropertiesRequest
+                {
+                    Properties = new SheetProperties
+                    {
+                        SheetId = 0,  // si la hoja es la primera
+                        GridProperties = new GridProperties
+                        {
+                            RowCount = 1,
+                            ColumnCount = 1
+                        }
+                    },
+                    Fields = "gridProperties(rowCount,columnCount)"
+                }
+            };
+
+            var batch = new BatchUpdateSpreadsheetRequest
+            {
+                Requests = new List<Request> { request }
+            };
+
+            await service.Spreadsheets.BatchUpdate(batch, spreadsheetId).ExecuteAsync();
         }
     }
 }
